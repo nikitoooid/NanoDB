@@ -2,88 +2,113 @@
 #include <LittleFS.h>
 #include <NanoDB.h>
 
-// === Define table structure ===
+// ---------------------- Table Definition ----------------------
 ColumnDef userCols[] = {
-  {"id",     'I', 4},
-  {"name",   'S', 20},
-  {"age",    'I', 4},
+  {"id", 'I', 4},
+  {"name", 'S', 20},
+  {"age", 'I', 4},
   {"active", 'B', 1},
   {"rating", 'F', 4}
 };
 
 NanoTable users("users");
 
+// ---------------------- Setup ----------------------
 void setup() {
   Serial.begin(115200);
-  delay(500);
-  Serial.println("\n=== NanoDB Demo ===");
+  LittleFS.begin(true);
+  // LittleFS.format();
 
-  // Initialize filesystem
-  if (!LittleFS.begin(true)) {
-    Serial.println("Failed to initialize LittleFS");
-    return;
-  }
-
-  // Initialize or create table
+  // Initialize table
   if (!users.begin(userCols, 5)) {
-    Serial.println("Failed to initialize users table");
+    Serial.println("❌ Failed to initialize table");
     return;
   }
 
-  // === Create new record ===
+  Serial.println("✅ Table initialized");
+
+  // ---------------------- Create Records ----------------------
   NanoRecord rec;
-  users.new(rec);
+
+  users.newRecord(rec);
   rec["name"] = "Ivan";
-  rec["age"] = 28;
+  rec["age"] = 25;
   rec["active"] = true;
-  rec["rating"] = 4.7;
+  rec["rating"] = 4.9f;
   users.save(rec);
 
-  Serial.println("Record saved:");
-  Serial.println((String)"ID: " + (int)rec["id"]);
-  Serial.println((String)"Name: " + (const char*)rec["name"]);
-  Serial.println((String)"Age: " + (int)rec["age"]);
-  Serial.println((String)"Active: " + (bool)rec["active"]);
-  Serial.println((String)"Rating: " + (float)rec["rating"]);
+  users.newRecord(rec);
+  rec["name"] = "Oleh";
+  rec["age"] = 30;
+  rec["active"] = false;
+  rec["rating"] = 3.5f;
+  users.save(rec);
 
-  // === Read record by ID ===
-  NanoRecord rec2;
-  if (users.read((int)rec["id"], rec2)) {
-    Serial.println("\nRecord read from DB:");
-    Serial.println((String)"Name: " + (const char*)rec2["name"]);
-    Serial.println((String)"Age: " + (int)rec2["age"]);
+  users.newRecord(rec);
+  rec["name"] = "Anna";
+  rec["age"] = 22;
+  rec["active"] = true;
+  rec["rating"] = 4.7f;
+  users.save(rec);
+
+  Serial.printf("📄 Records: %lu\n", users.records());
+  Serial.printf("🔢 Last ID: %lu\n", users.lastId());
+
+  // ---------------------- Read & Display ----------------------
+  NanoRecord r;
+  if (users.read(2, r)) {
+    Serial.println("👉 Record #2:");
+    Serial.println(String("  Name: ") + String((const char*)r["name"]));
+    Serial.println("  Age: " + String((int)r["age"]));
+    Serial.println("  Rating: " + String((float)r["rating"]));
   }
 
-  // === Update record ===
-  rec2["rating"] = 4.9;
-  rec2["name"] = "Ivan Updated";
-  users.update(rec2);
-
-  Serial.println("\nAfter update:");
-  Serial.println((String)"Name: " + (const char*)rec2["name"]);
-  Serial.println((String)"Rating: " + (float)rec2["rating"]);
-
-  // === Find record by name ===
-  NanoRecord found;
-  if (users.find(found, "name", "Ivan Updated")) {
-    Serial.println("\nFound record:");
-    Serial.println((String)"ID: " + (int)found["id"]);
-    Serial.println((String)"Age: " + (int)found["age"]);
+  // ---------------------- findNext / findPrevious ----------------------
+  NanoRecord next;
+  if (users.findNext(next, 2)) {
+    Serial.println("\n➡️ Next after #2:");
+    Serial.println("  ID: " + String((int)next["id"]));
+    Serial.println(String("  Name: ") + String((const char*)next["name"]));
   }
 
-  // === Show stats ===
-  Serial.println("\n=== Table Info ===");
-  Serial.println((String)"Records: " + users.records());
-  Serial.println((String)"Size: " + users.size() + " bytes");
+  NanoRecord prev;
+  if (users.findPrevious(prev, 2)) {
+    Serial.println("\n⬅️ Previous before #2:");
+    Serial.println("  ID: " + String((int)prev["id"]));
+    Serial.println(String("  Name: ") + String((const char*)prev["name"]));
+  }
 
-  // === Delete record ===
-  users.drop((int)found["id"]);
-  Serial.println("\nRecord deleted.");
+  // ---------------------- Drop a Record ----------------------
+  users.drop(2);
+  Serial.println("\n🗑️ Record #2 deleted");
 
-  // === Drop table ===
-  users.drop();
-  Serial.println("Table dropped.");
+  Serial.printf("📄 Records after delete: %lu\n", users.records());
+  Serial.printf("🔢 Last ID (unchanged): %lu\n", users.lastId());
+
+  // ---------------------- findNext after delete ----------------------
+  if (users.findNext(next, 1)) {
+    Serial.println("\n➡️ Next after #1:");
+    Serial.println("  ID: " + String((int)next["id"]));
+    Serial.println(String("  Name: ") + String((const char*)next["name"]));
+  } else {
+    Serial.println("No next record after #1");
+  }
+
+  // ---------------------- Drop a Record ----------------------
+  users.drop(2);
+  Serial.println("\n🗑️ Record #2 deleted");
+
+  Serial.printf("📄 Records after delete: %lu\n", users.records());
+  Serial.printf("🔢 Last ID (unchanged): %lu\n", users.lastId());
+
+  // ---------------------- Drop a Table ----------------------
+  if (!users.drop()) {
+    Serial.println("❌ Failed to drop a table");
+    LittleFS.format();
+    return;
+  }
+
+  Serial.println("✅ Table dropped");
 }
 
-void loop() {
-}
+void loop() {}

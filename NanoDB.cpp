@@ -236,6 +236,39 @@ uint32_t NanoTable::records() {
   return cnt;
 }
 
+uint32_t NanoTable::lastId() {
+  if (_colCount == 0) _loadHeader();
+
+  // find index of id column
+  int idIdx = -1;
+  for (int i = 0; i < _colCount; i++) {
+    if (_cols[i].name == "id" && _cols[i].type == 'I') { idIdx = i; break; }
+  }
+  if (idIdx < 0) return 0; // no id column
+
+  File f = NANOFS.open(_path, "r");
+  if (!f) return 0;
+
+  size_t pos = _headerSizeBytes();
+  int32_t maxId = 0;
+
+  while (pos + _recordSize <= f.size()) {
+    // compute offset of id within this record
+    size_t idOff = pos;
+    for (int j = 0; j < idIdx; j++) idOff += _typeSize(_cols[j]);
+
+    int32_t v = 0;
+    f.seek(idOff);
+    if (f.read((uint8_t*)&v, sizeof(v)) != sizeof(v)) break;
+
+    if (v > maxId) maxId = v;
+    pos += _recordSize;
+  }
+
+  f.close();
+  return (uint32_t)maxId;
+}
+
 size_t NanoTable::size() {
   if (!_exists()) return 0;
   File f = NANOFS.open(_path,"r");
@@ -516,6 +549,24 @@ bool NanoTable::find(NanoRecord &outRec, const String &col, float val) {
   bool ok = _readRecordAt(f, off, outRec);
   f.close();
   return ok;
+}
+
+bool NanoTable::findNext(NanoRecord &rec, int32_t id) {
+    int32_t nextId = id + 1;
+    int32_t total = lastId();
+    while (nextId <= total) {
+        if (find(rec, nextId)) return true;
+        nextId++;
+    }
+    return false;
+}
+bool NanoTable::findPrevious(NanoRecord &rec, int32_t id) {
+    int32_t prevId = id - 1;
+    while (prevId > 0) {
+        if (find(rec, prevId)) return true;
+        prevId--;
+    }
+    return false;
 }
 
 bool NanoTable::drop(int32_t idValue) {

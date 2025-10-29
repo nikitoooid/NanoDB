@@ -69,6 +69,7 @@ void setup() {
 ```cpp
 users.drop();        // Delete the table file
 users.records();     // Get number of records in the table
+users.lastId();      // returns the highest used ID, even if some records were deleted
 users.size();        // Get table size in bytes
 ```
 

@@ -109,6 +109,7 @@ public:
 
   // counts and size
   uint32_t records(); // returns number of non-deleted records (id != 0)
+  uint32_t lastId();  // returns max id value used
   size_t size();      // file size in bytes
 
   // lifecycle for record creation
@@ -124,6 +125,9 @@ public:
   bool find(NanoRecord &outRec, const String &col, const String &val);
   bool find(NanoRecord &outRec, const String &col, int32_t val);
   bool find(NanoRecord &outRec, const String &col, float val);
+
+  bool findNext(NanoRecord &rec, int32_t id);
+  bool findPrevious(NanoRecord &rec, int32_t id);
 
   // delete record by id (logical delete: id -> 0)
   bool drop(int32_t idValue);
