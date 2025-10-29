@@ -109,6 +109,9 @@ NanoRecord rec;
 if (users.find(rec, 1)) { /* find by ID */ }
 if (users.find(rec, "name", "Alice")) { /* find by field */ }
 if (users.find(rec, "age", 30)) { /* find by int */ }
+
+if (users.findNext(rec, lastId)) { /* find next after lastId */ }
+if (users.findPrev(rec, lastId)) { /* find next before lastId */ }
 ```
 
 ### Delete
